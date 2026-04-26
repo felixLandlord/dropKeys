@@ -4,6 +4,7 @@ from ..state import AppState
 
 
 def unseal() -> rx.Component:
+
     return page_shell(
         rx.el.div(
             rx.cond(

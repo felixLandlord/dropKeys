@@ -9,6 +9,7 @@ import json
 import httpx
 from typing import Optional, List
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 # Set environment variables before importing GoogleAuthState
 os.environ["GOOGLE_CLIENT_ID"] = settings.google_client_id
@@ -52,8 +53,8 @@ class AppState(GoogleAuthState):
 
     origin: str = ""
     share_content: str = ""
-    reads: str = "999"
-    ttl_value: str = "7"
+    reads: int = 999
+    ttl_value: int = 7
     ttl_unit: str = "Days"
     share_url: str = ""
     share_copied: bool = False
@@ -190,12 +191,18 @@ class AppState(GoogleAuthState):
         self.share_content = value
 
     @rx.event
-    def set_reads(self, value: str):
-        self.reads = value
+    def set_reads(self, value: float):
+        try:
+            self.reads = int(value)
+        except (ValueError, TypeError):
+            self.reads = 0
 
     @rx.event
-    def set_ttl_value(self, value: str):
-        self.ttl_value = value
+    def set_ttl_value(self, value: float):
+        try:
+            self.ttl_value = int(value)
+        except (ValueError, TypeError):
+            self.ttl_value = 0
 
     @rx.var(cache=True)
     def line_numbers(self) -> List[str]:
@@ -250,7 +257,7 @@ class AppState(GoogleAuthState):
                 if v > 0:
                     multipliers = {"Minutes": 60, "Hours": 3600, "Days": 86400}
                     ttl_seconds = int(v * multipliers.get(self.ttl_unit, 86400))
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
             reads_left = 0
@@ -258,8 +265,9 @@ class AppState(GoogleAuthState):
                 r = int(self.reads)
                 if r > 0:
                     reads_left = r
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
+
 
             # 3. Store in Upstash Redis
             redis = redis_client.get_redis_client()
@@ -279,8 +287,10 @@ class AppState(GoogleAuthState):
             )
 
             # Construct full URL using router state
-            host = self.router.page.host
+            url_obj = urlparse(self.router.url)
+            host = f"{url_obj.scheme}://{url_obj.netloc}"
             self.share_url = f"{host}/unseal#{comp_key}"
+
             self.share_loading = False
 
             
@@ -300,8 +310,8 @@ class AppState(GoogleAuthState):
     @rx.event
     def reset_share(self):
         self.share_content = ""
-        self.reads = "999"
-        self.ttl_value = "7"
+        self.reads = 999
+        self.ttl_value = 7
         self.ttl_unit = "Days"
         self.share_url = ""
         self.share_error = ""

@@ -16,8 +16,8 @@ def _ttl_select() -> rx.Component:
     )
 
 
-@rx.page(route="/share")
 def share() -> rx.Component:
+
 
     return page_shell(
         rx.el.div(
