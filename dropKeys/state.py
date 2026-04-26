@@ -1,3 +1,4 @@
+import asyncio
 import reflex as rx
 from .config import settings
 import os
@@ -49,12 +50,15 @@ class AppState(GoogleAuthState):
     total_secrets: int = 0
     total_shared: int = 0
 
+    origin: str = ""
     share_content: str = ""
     reads: str = "999"
     ttl_value: str = "7"
     ttl_unit: str = "Days"
     share_url: str = ""
+    share_copied: bool = False
     share_error: str = ""
+
     share_loading: bool = False
 
     unseal_id: str = ""
@@ -215,7 +219,7 @@ class AppState(GoogleAuthState):
         self.ttl_unit = value
 
     @rx.event
-    def do_share(self):
+    async def do_share(self):
         self.share_loading = True
         self.share_url = ""
         self.share_error = ""
@@ -265,16 +269,24 @@ class AppState(GoogleAuthState):
                 encryption_key=res["key"]
             )
 
-            self.share_url = f"/unseal#{comp_key}"
+            # Construct full URL using router state
+            host = self.router.page.host
+            self.share_url = f"{host}/unseal#{comp_key}"
             self.share_loading = False
+
             
         except Exception as e:
             self.share_error = f"Encryption/Storage failed: {str(e)}"
             self.share_loading = False
 
+
     @rx.event
-    def copy_share_url(self):
-        return rx.set_clipboard(self.share_url)
+    async def copy_share_url(self):
+        yield rx.set_clipboard(self.share_url)
+        self.share_copied = True
+        yield
+        await asyncio.sleep(2)
+        self.share_copied = False
 
     @rx.event
     def reset_share(self):
