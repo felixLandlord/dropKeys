@@ -26,6 +26,18 @@ def share() -> rx.Component:
                 AppState.share_url == "",
                 # Input View
                 rx.el.div(
+                    # Error View
+                    rx.cond(
+                        AppState.share_error != "",
+                        rx.el.div(
+                            rx.el.span(
+                                AppState.share_error,
+                                class_name="px-4 py-2 text-red-500 border rounded border-red-500/50 bg-red-500/10"
+                            ),
+                            class_name="flex items-center justify-center my-8 lg:my-16"
+                        ),
+                    ),
+
                     rx.el.h1(
                         "Encrypt and Share",
                         class_name=(
@@ -159,16 +171,6 @@ def share() -> rx.Component:
                             "enabled:hover:ring-1 enabled:hover:ring-zinc-600/80 duration-150 "
                             "disabled:opacity-40 disabled:cursor-not-allowed"
                         ),
-                    ),
-
-                    # Error
-                    rx.cond(
-                        AppState.share_error != "",
-                        rx.el.p(
-                            AppState.share_error,
-                            class_name="mt-3 text-sm text-red-400",
-                        ),
-                        rx.fragment(),
                     ),
 
                     # Helper text

@@ -12,6 +12,18 @@ def unseal() -> rx.Component:
                 AppState.unsealed_content == "",
                 # Input View
                 rx.el.div(
+                    # Error View
+                    rx.cond(
+                        AppState.unseal_error != "",
+                        rx.el.div(
+                            rx.el.span(
+                                AppState.unseal_error,
+                                class_name="px-4 py-2 text-red-500 border rounded border-red-500/50 bg-red-500/10"
+                            ),
+                            class_name="flex items-center justify-center my-8 lg:my-16"
+                        ),
+                    ),
+
                     rx.el.h1(
                         "Decrypt a document",
                         class_name=(
@@ -56,15 +68,6 @@ def unseal() -> rx.Component:
                         ),
                     ),
 
-                    # Error
-                    rx.cond(
-                        AppState.unseal_error != "",
-                        rx.el.p(
-                            AppState.unseal_error,
-                            class_name="mt-4 text-sm text-red-400 text-center",
-                        ),
-                        rx.fragment(),
-                    ),
                     class_name="w-full max-w-3xl px-6 py-16",
                 ),
                 # Success View
