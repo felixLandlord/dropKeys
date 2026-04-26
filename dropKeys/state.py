@@ -63,6 +63,8 @@ class AppState(GoogleAuthState):
 
     unseal_id: str = ""
     unsealed_content: str = ""
+    unseal_reads_left: Optional[int] = None
+    unseal_copied: bool = False
     unseal_error: str = ""
     unseal_loading: bool = False
 
@@ -200,6 +202,13 @@ class AppState(GoogleAuthState):
         # Count lines and return list of padded strings like "01", "02", etc.
         lines = self.share_content.count("\n") + 1
         return [str(i).zfill(2) for i in range(1, lines + 1)]
+
+    @rx.var(cache=True)
+    def line_numbers_unseal(self) -> List[str]:
+        if not self.unsealed_content:
+            return ["01"]
+        lines = self.unsealed_content.split("\n")
+        return [str(i + 1).zfill(2) for i in range(len(lines))]
 
     @rx.event
     async def handle_file_upload(self, files: List[rx.UploadFile]):
@@ -339,6 +348,16 @@ class AppState(GoogleAuthState):
             )
             
             self.unsealed_content = plaintext
+            
+            # Handle reads left display
+            reads = record.get("remainingReads")
+            if reads is not None:
+                # Since the redis_client decremented it AFTER hgetall, 
+                # we show the decremented value.
+                self.unseal_reads_left = int(reads) - 1
+            else:
+                self.unseal_reads_left = None
+
             self.unseal_loading = False
             
         except Exception as e:
@@ -346,9 +365,19 @@ class AppState(GoogleAuthState):
             self.unseal_loading = False
 
     @rx.event
+    async def copy_unsealed_content(self):
+        yield rx.set_clipboard(self.unsealed_content)
+        self.unseal_copied = True
+        yield
+        await asyncio.sleep(2)
+        self.unseal_copied = False
+
+    @rx.event
     def reset_unseal(self):
         self.unseal_id = ""
         self.unsealed_content = ""
+        self.unseal_reads_left = None
+        self.unseal_copied = False
         self.unseal_error = ""
 
     @rx.event
