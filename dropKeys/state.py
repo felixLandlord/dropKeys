@@ -308,7 +308,14 @@ class AppState(GoogleAuthState):
         self.share_copied = False
 
     @rx.event
+    def navigate_to(self, path: str):
+        self.reset_share()
+        self.reset_unseal()
+        return rx.redirect(path)
+
+    @rx.event
     def reset_share(self):
+
         self.share_content = ""
         self.reads = 999
         self.ttl_value = 7

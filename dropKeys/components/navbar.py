@@ -7,31 +7,67 @@ def navbar() -> rx.Component:
         rx.el.div(
             # Logo
             rx.el.div(
-                rx.el.a(
-                    rx.el.span("Drop", class_name="text-white font-bold text-2xl"),
-                    rx.el.span("Keys", class_name="text-zinc-500 font-bold text-2xl"),
+                rx.link(
+                    rx.el.div(
+                        rx.el.span("Drop", class_name="text-white font-bold text-2xl"),
+                        rx.el.span("Keys", class_name="text-zinc-500 font-bold text-2xl"),
+                        class_name="flex items-center",
+                    ),
                     href="/home",
-                    class_name="flex items-center",
+                    underline="none",
+                    color_scheme="gray",
+                    on_click=[AppState.reset_share, AppState.reset_unseal],
                 ),
+
+
+
+
+
+
+
                 class_name="flex-1 flex justify-start",
             ),
             # Centered Navigation
             rx.el.div(
-                rx.el.a(
+                rx.link(
                     "Home",
                     href="/home",
-                    class_name="text-lg text-zinc-400 hover:text-white transition-colors duration-150 px-4",
+                    underline="none",
+                    color_scheme="gray",
+                    on_click=[AppState.reset_share, AppState.reset_unseal],
+                    class_name="text-lg text-zinc-400 !hover:text-white transition-colors duration-150 px-4",
                 ),
-                rx.el.a(
+
+
+
+
+                rx.link(
                     "Share",
                     href="/share",
-                    class_name="text-lg text-zinc-400 hover:text-white transition-colors duration-150 px-4",
+                    underline="none",
+                    color_scheme="gray",
+                    on_click=[AppState.reset_share, AppState.reset_unseal],
+                    class_name="text-lg text-zinc-400 !hover:text-white transition-colors duration-150 px-4",
                 ),
-                rx.el.a(
+
+
+
+                rx.link(
                     "Unseal",
                     href="/unseal",
-                    class_name="text-lg text-zinc-400 hover:text-white transition-colors duration-150 px-4",
+                    underline="none",
+                    color_scheme="gray",
+                    on_click=[AppState.reset_share, AppState.reset_unseal],
+                    class_name="text-lg text-zinc-400 !hover:text-white transition-colors duration-150 px-4",
                 ),
+
+
+
+
+
+
+
+
                 class_name="flex-1 flex justify-center items-center gap-4",
             ),
             # User & Logout
