@@ -77,6 +77,10 @@ def share() -> rx.Component:
                                 ),
                                 id="file_input",
                                 on_drop=AppState.handle_file_upload(rx.upload_files(upload_id="file_input")),
+                                accept={
+                                    "": [".env", ".env.example", ".env.local", ".env.development", ".env.production", ".env.test"],
+                                    "text/plain": [".env", ".env.example", ".env.local", ".env.development", ".env.production", ".env.test"]
+                                },
                                 no_click=False,
                                 multiple=False,
                                 border="none",
