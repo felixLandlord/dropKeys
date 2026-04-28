@@ -19,9 +19,9 @@ from reflex_google_auth import GoogleAuthState
 
 
 import base58
-from .core import encryption, encoding, redis_client
+from .models import User, SecretMetadata, SecretRecipient
 from .database import SessionLocal
-from .models import User
+from .core import encryption, redis_client
 
 def _get_db():
     db = SessionLocal()
@@ -61,6 +61,13 @@ class AppState(GoogleAuthState):
     share_error: str = ""
 
     share_loading: bool = False
+    share_name: str = ""
+    share_recipients: list[str] = []
+    share_recipient_input: str = ""
+    share_recipient_error: str = ""
+    recipient_suggestions: list[str] = []
+    suggestion_index: int = -1
+    activities: list[dict[str, str]] = []
 
     unseal_id: str = ""
     unsealed_content: str = ""
@@ -184,7 +191,42 @@ class AppState(GoogleAuthState):
             self.db_user_id = user.id
             self.stored_email = user.email or ""
             self.stored_name = user.name or ""
+            
+            # Fetch activities (Owned or Received)
+            owned = db.query(SecretMetadata).filter(SecretMetadata.owner_id == user.id).all()
+            
+            # Received via SecretRecipient table
+            received_refs = db.query(SecretRecipient).filter(SecretRecipient.recipient_email == user.email).all()
+            
+            acts = []
+            for s in owned:
+                rec_emails = [r.recipient_email for r in s.recipients]
+                acts.append({
+                    "id": s.doc_id,
+                    "name": s.name,
+                    "type": "Sent",
+                    "person": ", ".join(rec_emails) if rec_emails else "Link only",
+                    "date": s.created_at.strftime("%b %d, %H:%M"),
+                    "comp_key": s.comp_key or ""
+                })
+            
+            for ref in received_refs:
+                s = ref.secret
+                if any(a["id"] == s.doc_id for a in acts):
+                    continue
+                acts.append({
+                    "id": s.doc_id,
+                    "name": s.name,
+                    "type": "Received",
+                    "person": s.owner.email,
+                    "date": s.created_at.strftime("%b %d, %H:%M"),
+                    "comp_key": s.comp_key or ""
+                })
+            
+            acts.sort(key=lambda x: x["date"], reverse=True)
+            self.activities = acts
         db.close()
+
 
     @rx.event
     def set_share_content(self, value: str):
@@ -204,8 +246,71 @@ class AppState(GoogleAuthState):
         except (ValueError, TypeError):
             self.ttl_value = 0
 
+    @rx.event
+    def view_activity(self, comp_key: str):
+        if comp_key:
+            return rx.redirect(f"/unseal#{comp_key}")
+
+    @rx.event
+    def set_share_name(self, value: str):
+        self.share_name = value
+
+    @rx.event
+    async def set_share_recipient_input(self, value: str):
+        self.share_recipient_input = value
+        self.suggestion_index = -1
+        if value.startswith("@"):
+            query = value[1:]
+            if len(query) >= 2:
+                db = _get_db()
+                if db:
+                    # Optimized search
+                    users = db.query(User).filter(User.email.ilike(f"%{query}%")).limit(5).all()
+                    self.recipient_suggestions = [
+                        u.email for u in users 
+                        if u.email != self.user_email and u.email not in self.share_recipients
+                    ]
+                    db.close()
+                return
+        self.recipient_suggestions = []
+
     @rx.var(cache=True)
-    def line_numbers(self) -> List[str]:
+    def indexed_suggestions(self) -> list[list]:
+        return [[email, i] for i, email in enumerate(self.recipient_suggestions)]
+
+    @rx.event
+    def select_recipient(self, email: str):
+        if email not in self.share_recipients:
+            self.share_recipients.append(email)
+        self.share_recipient_input = ""
+        self.recipient_suggestions = []
+        self.suggestion_index = -1
+
+    @rx.event
+    def handle_recipient_keydown(self, key: str):
+        num_suggestions = len(self.recipient_suggestions)
+        if key == "ArrowDown":
+            if num_suggestions > 0:
+                self.suggestion_index = (self.suggestion_index + 1) % num_suggestions
+        elif key == "ArrowUp":
+            if num_suggestions > 0:
+                self.suggestion_index = (self.suggestion_index - 1) % num_suggestions
+        elif key == "Enter":
+            if num_suggestions > 0 and self.suggestion_index != -1:
+                self.select_recipient(self.recipient_suggestions[self.suggestion_index])
+            elif num_suggestions > 0:
+                self.select_recipient(self.recipient_suggestions[0])
+
+    @rx.event
+    def remove_recipient(self, email: str):
+        self.share_recipients = [r for r in self.share_recipients if r != email]
+
+    @rx.var(cache=True)
+    def share_recipients_str(self) -> str:
+        return ", ".join(self.share_recipients)
+
+    @rx.var(cache=True)
+    def line_numbers(self) -> list[str]:
         # Count lines and return list of padded strings like "01", "02", etc.
         lines = self.share_content.count("\n") + 1
         return [str(i).zfill(2) for i in range(1, lines + 1)]
@@ -247,6 +352,14 @@ class AppState(GoogleAuthState):
             return
 
         try:
+            if not self.share_name.strip():
+                self.share_error = "Project Name is required."
+                self.share_loading = False
+                return
+
+            # Note: No need to validate recipients here as they are validated when added
+            # But we could do a final check if needed.
+
             # 1. Encrypt content
             res = encryption.encrypt(self.share_content)
             
@@ -286,12 +399,35 @@ class AppState(GoogleAuthState):
                 encryption_key=res["key"]
             )
 
+            # 5. Save metadata and recipients to Postgres
+            db = _get_db()
+            if db:
+                metadata = SecretMetadata(
+                    doc_id=doc_id,
+                    name=self.share_name,
+                    owner_id=self.db_user_id,
+                    comp_key=comp_key # Store the key for direct unsealing
+                )
+                db.add(metadata)
+                db.flush() # Get ID
+                
+                for email in self.share_recipients:
+                    rec = SecretRecipient(
+                        secret_id=metadata.id,
+                        recipient_email=email
+                    )
+                    db.add(rec)
+                    
+                db.commit()
+                db.close()
+
             # Construct full URL using router state
             url_obj = urlparse(self.router.url)
             host = f"{url_obj.scheme}://{url_obj.netloc}"
             self.share_url = f"{host}/unseal#{comp_key}"
 
             self.share_loading = False
+
 
             
         except Exception as e:
@@ -315,8 +451,12 @@ class AppState(GoogleAuthState):
 
     @rx.event
     def reset_share(self):
-
         self.share_content = ""
+        self.share_name = ""
+        self.share_recipients = []
+        self.share_recipient_input = ""
+        self.share_recipient_error = ""
+        self.recipient_suggestions = []
         self.reads = 999
         self.ttl_value = 7
         self.ttl_unit = "Days"

@@ -7,8 +7,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# Create tables on import
+# Import models to ensure they are registered with Base
+from . import models
+
+# Create tables
 Base.metadata.create_all(bind=engine)
+
 
 
 def get_db():

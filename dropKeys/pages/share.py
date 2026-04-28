@@ -46,6 +46,74 @@ def share() -> rx.Component:
                         ),
                     ),
                     
+                    # New Inputs: Name and Recipient
+                    rx.box(
+                        rx.box(
+                            rx.text("Name", class_name="block text-xs font-medium text-zinc-100 mb-1"),
+                            rx.el.input(
+                                placeholder="My Project Config",
+                                value=AppState.share_name,
+                                on_change=AppState.set_share_name,
+                                class_name="w-full p-0 text-base bg-transparent border-0 appearance-none text-zinc-100 placeholder-zinc-500 focus:ring-0 focus:outline-none sm:text-sm",
+                            ),
+                            class_name="px-3 py-2 border rounded border-zinc-600 duration-150 hover:border-zinc-100/80 focus-within:border-zinc-100/80",
+                        ),
+                        rx.box(
+                            rx.text("Share with (@email)", class_name="block text-xs font-medium text-zinc-100 mb-1"),
+                            # Recipient Chips
+                            rx.flex(
+                                rx.foreach(
+                                    AppState.share_recipients,
+                                    lambda email: rx.box(
+                                        rx.text(email, as_="span", class_name="mr-2"),
+                                        rx.button(
+                                            "✕",
+                                            on_click=lambda: AppState.remove_recipient(email),
+                                            class_name="hover:text-white transition-colors text-[10px] bg-transparent p-0 h-auto min-h-0 min-w-0 border-0",
+                                        ),
+                                        class_name="inline-flex items-center px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs mr-2 mb-2",
+                                    )
+                                ),
+                                class_name="flex-wrap",
+                            ),
+                            rx.input(
+                                placeholder=rx.cond(AppState.share_recipients.length() == 0, "@user@gmail.com", ""),
+                                value=AppState.share_recipient_input,
+                                on_change=AppState.set_share_recipient_input,
+                                on_key_down=AppState.handle_recipient_keydown,
+                                debounce_timeout=300,
+                                variant="soft",
+                                class_name="w-full p-0 text-base !bg-transparent border-0 appearance-none text-zinc-100 placeholder-zinc-500 !focus:ring-0 !shadow-none !outline-none sm:text-sm",
+                            ),
+
+                            # Suggestions
+                            rx.cond(
+                                AppState.recipient_suggestions.length() > 0,
+                                rx.box(
+                                    rx.foreach(
+                                        AppState.indexed_suggestions,
+                                        lambda item: rx.box(
+                                            item[0],
+                                            on_click=lambda: AppState.select_recipient(item[0]),
+                                            class_name=rx.cond(
+                                                AppState.suggestion_index == item[1],
+                                                "px-3 py-2 cursor-pointer bg-zinc-800 text-white text-sm",
+                                                "px-3 py-2 cursor-pointer hover:bg-zinc-800/50 text-zinc-300 text-sm",
+                                            )
+                                        )
+                                    ),
+                                    class_name="absolute z-10 left-0 w-full mt-2 bg-[#0e0e0e] border border-zinc-800 rounded shadow-xl overflow-hidden",
+                                )
+                            ),
+
+                            class_name="px-3 py-2 border rounded border-zinc-600 duration-150 hover:border-zinc-100/80 focus-within:border-zinc-100/80 relative min-h-[64px] flex flex-col justify-center",
+                        ),
+                        class_name="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 mt-8 w-full",
+                    ),
+
+
+
+                    
                     # Textarea
                     rx.el.pre(
                         rx.el.div(
@@ -70,7 +138,7 @@ def share() -> rx.Component:
                             class_name="flex items-start px-4 py-3 text-sm",
                         ),
                         class_name=(
-                            "mt-8 w-full rounded border border-zinc-600 bg-transparent "
+                            "mt-4 w-full rounded border border-zinc-600 bg-transparent "
                             "focus-within:border-zinc-100/80 transition-all duration-150"
                         ),
                     ),
@@ -163,8 +231,9 @@ def share() -> rx.Component:
                             "Share"
                         ),
                         on_click=AppState.do_share,
-                        disabled=AppState.share_loading | (AppState.share_content == ""),
+                        disabled=AppState.share_loading | (AppState.share_content == "") | (AppState.share_name == ""),
                         class_name=(
+
                             "mt-6 w-full h-12 inline-flex justify-center items-center transition-all "
                             "rounded px-4 py-1.5 md:py-2 text-base font-semibold bg-zinc-200 "
                             "text-zinc-900 enabled:hover:bg-zinc-900/20 enabled:hover:text-zinc-100 "
@@ -212,6 +281,15 @@ def share() -> rx.Component:
                             "bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent"
                         ),
                     ),
+                    rx.cond(
+                        AppState.share_recipients.length() > 0,
+                        rx.el.p(
+                            f"This document has been shared with {AppState.share_recipients_str}",
+                            class_name="mt-4 text-sm text-zinc-500 text-center"
+                        ),
+                    ),
+
+
                     rx.el.div(
                         rx.el.div(
                             rx.el.input(
