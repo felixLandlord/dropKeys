@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from dropKeys.database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class User(Base):
@@ -13,8 +13,8 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False)
     name = Column(String(255))
     picture = Column(String(512))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_login = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    last_login = Column(DateTime, default=datetime.now(timezone.utc))
 
     # Relationships
     secrets_owned = relationship("SecretMetadata", back_populates="owner", foreign_keys="SecretMetadata.owner_id")
@@ -28,7 +28,7 @@ class SecretMetadata(Base):
     name = Column(String(255), nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     comp_key = Column(String(512), nullable=True) # The hash part of the URL for direct sharing
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
 
     # Relationships

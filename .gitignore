@@ -5,6 +5,5 @@ __pycache__/
 .web
 assets/external/
 .env
-z_app/
 .python-version
 .venv/

@@ -556,4 +556,15 @@ class AppState(GoogleAuthState):
     def logout(self):
         self.token_response_json = ""
         self.refresh_token = ""
-        return rx.redirect("/")
+        
+        # Clear user state immediately
+        self.stored_email = ""
+        self.stored_name = ""
+        self.db_user_id = None
+        self.activities = []
+        
+        # Clear workflow states
+        self.reset_share()
+        self.reset_unseal()
+        
+        yield

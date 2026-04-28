@@ -78,7 +78,7 @@ def navbar() -> rx.Component:
                 ),
                 rx.el.button(
                     "Logout",
-                    on_click=AppState.logout,
+                    on_click=[rx.redirect("/"), AppState.logout],
                     class_name=(
                         "text-sm px-4 py-2 rounded bg-zinc-200 text-zinc-900 font-bold "
                         "hover:bg-zinc-900/20 hover:text-zinc-100 hover:ring-1 hover:ring-zinc-600/80 "
