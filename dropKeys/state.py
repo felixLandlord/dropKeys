@@ -21,7 +21,7 @@ from reflex_google_auth import GoogleAuthState
 import base58
 from .models import User, SecretMetadata, SecretRecipient
 from .database import SessionLocal
-from .core import encryption, redis_client
+from .core import encryption, redis_client, encoding
 
 def _get_db():
     db = SessionLocal()
