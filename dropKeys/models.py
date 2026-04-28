@@ -42,6 +42,7 @@ class SecretRecipient(Base):
     id = Column(Integer, primary_key=True)
     secret_id = Column(Integer, ForeignKey("secret_metadata.id"), nullable=False)
     recipient_email = Column(String(255), nullable=False)
+    is_read = Column(Integer, default=0) # 0 for false, 1 for true (SQLite compatible)
 
     # Relationships
     secret = relationship("SecretMetadata", back_populates="recipients")

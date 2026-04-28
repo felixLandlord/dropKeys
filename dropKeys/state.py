@@ -175,7 +175,8 @@ class AppState(GoogleAuthState):
                             "type": "Sent",
                             "person": ", ".join(rec_emails) if rec_emails else "Link only",
                             "date": s.created_at.strftime("%b %d, %H:%M"),
-                            "comp_key": s.comp_key or ""
+                            "comp_key": s.comp_key or "",
+                            "is_new": False
                         })
                     
                     for ref in received_refs:
@@ -188,7 +189,8 @@ class AppState(GoogleAuthState):
                             "type": "Received",
                             "person": s.owner.email,
                             "date": s.created_at.strftime("%b %d, %H:%M"),
-                            "comp_key": s.comp_key or ""
+                            "comp_key": s.comp_key or "",
+                            "is_new": ref.is_read == 0
                         })
                     
                     acts.sort(key=lambda x: x["date"], reverse=True)
@@ -240,7 +242,8 @@ class AppState(GoogleAuthState):
                     "type": "Sent",
                     "person": ", ".join(rec_emails) if rec_emails else "Link only",
                     "date": s.created_at.strftime("%b %d, %H:%M"),
-                    "comp_key": s.comp_key or ""
+                    "comp_key": s.comp_key or "",
+                    "is_new": False
                 })
             
             for ref in received_refs:
@@ -253,7 +256,8 @@ class AppState(GoogleAuthState):
                     "type": "Received",
                     "person": s.owner.email,
                     "date": s.created_at.strftime("%b %d, %H:%M"),
-                    "comp_key": s.comp_key or ""
+                    "comp_key": s.comp_key or "",
+                    "is_new": ref.is_read == 0
                 })
             
             acts.sort(key=lambda x: x["date"], reverse=True)
@@ -282,6 +286,31 @@ class AppState(GoogleAuthState):
     @rx.event
     def view_activity(self, comp_key: str):
         if comp_key:
+            # Mark as read if user is receiver
+            db = _get_db()
+            if db:
+                try:
+                    # Find the secret by comp_key
+                    secret = db.query(SecretMetadata).filter(SecretMetadata.comp_key == comp_key).first()
+                    if secret:
+                        # Find the recipient record for this user
+                        recipient = db.query(SecretRecipient).filter(
+                            SecretRecipient.secret_id == secret.id,
+                            SecretRecipient.recipient_email == self.user_email
+                        ).first()
+                        if recipient and recipient.is_read == 0:
+                            recipient.is_read = 1
+                            db.commit()
+                            # Update local activities state to reflect the change
+                            for act in self.activities:
+                                if act["comp_key"] == comp_key and act["type"] == "Received":
+                                    act["is_new"] = False
+                                    break
+                except Exception as e:
+                    print(f"Error marking as read: {e}")
+                finally:
+                    db.close()
+
             self.reset_unseal()
             self.unseal_id = comp_key
             yield rx.redirect(f"/unseal#{comp_key}")
