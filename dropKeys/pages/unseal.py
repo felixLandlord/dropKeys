@@ -12,6 +12,7 @@ def unseal() -> rx.Component:
                 AppState.unsealed_content == "",
                 # Input View
                 rx.el.div(
+
                     # Error View
                     rx.cond(
                         AppState.unseal_error != "",
@@ -158,6 +159,10 @@ def unseal() -> rx.Component:
                     ),
                     class_name="w-full max-w-4xl px-6 py-16",
                 )
+            ),
+            on_mount=rx.call_script(
+                "window.location.hash",
+                callback=AppState.load_unseal_from_hash,
             ),
             class_name="w-full flex flex-col items-center",
         ),

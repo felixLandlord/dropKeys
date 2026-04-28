@@ -21,29 +21,34 @@ def index() -> rx.Component:
                         rx.foreach(
                             AppState.activities,
                             lambda act: rx.el.div(
+                                # Left: name + meta
                                 rx.el.div(
+                                    rx.el.span(act["name"], class_name="text-zinc-100 font-medium text-sm block"),
                                     rx.el.div(
-                                        rx.el.span(act["name"], class_name="text-zinc-100 font-semibold block text-base"),
                                         rx.el.span(
-                                            rx.cond(
-                                                act["type"] == "Sent",
-                                                f"To: {act['person']}",
-                                                f"From: {act['person']}"
-                                            ),
-                                            class_name="text-zinc-500 text-xs mt-1"
+                                            rx.cond(act["type"] == "Sent", "Sent to ", "From "),
+                                            class_name="text-zinc-600 text-xs"
                                         ),
-                                        class_name="flex-1"
+                                        rx.el.span(act["person"], class_name="text-zinc-400 text-xs"),
+                                        class_name="flex items-center gap-1 mt-0.5 flex-wrap"
                                     ),
-                                    rx.el.div(
-                                        rx.el.span(act["date"], class_name="text-zinc-500 text-xs mr-4"),
-                                        rx.el.span(">", class_name="text-zinc-500 font-bold"),
-                                        class_name="flex items-center"
-                                    ),
-                                    class_name="flex items-center justify-between p-6 hover:bg-zinc-800/30 transition-colors cursor-pointer",
-                                    on_click=lambda: AppState.view_activity(act["comp_key"])
+                                    class_name="flex-1 min-w-0"
                                 ),
-
-                                class_name="border-b border-zinc-800 last:border-0"
+                                # Right: date + unseal button
+                                rx.el.div(
+                                    rx.el.span(act["date"], class_name="text-zinc-600 text-xs whitespace-nowrap"),
+                                    rx.el.button(
+                                        "Unseal",
+                                        on_click=lambda: AppState.view_activity(act["comp_key"]),
+                                        class_name=(
+                                            "ml-4 px-3 py-1 text-xs font-medium rounded border border-zinc-600 "
+                                            "text-zinc-300 hover:border-zinc-100/80 hover:text-zinc-100 "
+                                            "transition-all duration-150 whitespace-nowrap"
+                                        ),
+                                    ),
+                                    class_name="flex items-center gap-3 shrink-0 ml-4"
+                                ),
+                                class_name="flex items-center justify-between px-5 py-3 border-b border-zinc-800 last:border-0"
                             )
                         ),
                         class_name="w-full bg-transparent h-full"

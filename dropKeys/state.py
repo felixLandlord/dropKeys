@@ -249,7 +249,16 @@ class AppState(GoogleAuthState):
     @rx.event
     def view_activity(self, comp_key: str):
         if comp_key:
+            self.reset_unseal()
+            self.unseal_id = comp_key
             return rx.redirect(f"/unseal#{comp_key}")
+
+    @rx.event
+    def load_unseal_from_hash(self, hash_value: str):
+        """Called on mount of unseal page with the URL hash value."""
+        key = hash_value.lstrip("#").strip()
+        if key:
+            self.unseal_id = key
 
     @rx.event
     def set_share_name(self, value: str):
@@ -273,6 +282,10 @@ class AppState(GoogleAuthState):
                     db.close()
                 return
         self.recipient_suggestions = []
+
+    @rx.var(cache=True)
+    def share_recipients_str(self) -> str:
+        return ", ".join(self.share_recipients)
 
     @rx.var(cache=True)
     def indexed_suggestions(self) -> list[list]:
@@ -445,8 +458,10 @@ class AppState(GoogleAuthState):
 
     @rx.event
     def navigate_to(self, path: str):
-        self.reset_share()
-        self.reset_unseal()
+        if path == "/unseal":
+            self.reset_unseal()
+        if path == "/share":
+            self.reset_share()
         return rx.redirect(path)
 
     @rx.event
