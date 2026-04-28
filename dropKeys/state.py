@@ -284,7 +284,7 @@ class AppState(GoogleAuthState):
         if comp_key:
             self.reset_unseal()
             self.unseal_id = comp_key
-            return rx.redirect(f"/unseal#{comp_key}")
+            yield rx.redirect(f"/unseal#{comp_key}")
 
     @rx.event
     def load_unseal_from_hash(self, hash_value: str):

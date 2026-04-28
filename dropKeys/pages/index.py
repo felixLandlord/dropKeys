@@ -4,8 +4,23 @@ from ..template import page_shell
 
 
 
+def activity_loading_overlay() -> rx.Component:
+    return rx.el.div(
+        rx.el.div(
+            rx.el.div(
+                class_name="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4 mx-auto"
+            ),
+            rx.el.p("Preparing unseal...", class_name="text-white text-xl font-medium tracking-tight"),
+            rx.el.p("Locating document in vault", class_name="text-zinc-500 text-sm mt-2"),
+            class_name="text-center p-8 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-2xl",
+        ),
+        id="activity-loading-overlay",
+        class_name="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-300",
+    )
+
 def index() -> rx.Component:
     return page_shell(
+        activity_loading_overlay(),
         rx.el.div(
             rx.el.h1(
                 "Activities",
@@ -39,7 +54,10 @@ def index() -> rx.Component:
                                     rx.el.span(act["date"], class_name="text-zinc-600 text-xs whitespace-nowrap"),
                                     rx.el.button(
                                         "Unseal",
-                                        on_click=lambda: AppState.view_activity(act["comp_key"]),
+                                        on_click=lambda: [
+                                            rx.call_script("document.getElementById('activity-loading-overlay').classList.remove('hidden')"),
+                                            AppState.view_activity(act["comp_key"])
+                                        ],
                                         class_name=(
                                             "ml-4 px-3 py-1 text-xs font-medium rounded border border-zinc-600 "
                                             "text-zinc-300 hover:border-zinc-100/80 hover:text-zinc-100 "
