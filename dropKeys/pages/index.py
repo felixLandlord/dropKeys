@@ -46,15 +46,21 @@ def index() -> rx.Component:
                                 class_name="border-b border-zinc-800 last:border-0"
                             )
                         ),
-                        class_name="w-full bg-transparent"
+                        class_name="w-full bg-transparent h-full"
                     ),
                     rx.el.div(
                         rx.el.p("No recent activity", class_name="text-zinc-500 text-base"),
-                        class_name="p-12 text-center mt-10"
+                        class_name="flex items-center justify-center h-full w-full flex-1"
                     )
                 ),
-                class_name="w-full border border-zinc-800 rounded-xl mt-12 bg-[#0a0a0a]/50 overflow-hidden",
+                class_name="w-full border border-zinc-600 rounded mt-12 bg-transparent overflow-hidden min-h-[400px] flex flex-col",
             ),
+
+
+
+
+
+
 
 
             class_name="w-full max-w-3xl px-6 py-16",
