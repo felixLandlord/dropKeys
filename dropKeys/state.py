@@ -285,7 +285,7 @@ class AppState(GoogleAuthState):
 
     @rx.event
     def view_activity(self, comp_key: str):
-        if comp_key:
+        if comp_key and isinstance(comp_key, str):
             # Mark as read if user is receiver
             db = _get_db()
             if db:
@@ -551,7 +551,7 @@ class AppState(GoogleAuthState):
         self.unseal_error = ""
         yield
 
-        comp_key = self.unseal_id.strip()
+        comp_key = self.unseal_id.strip() if isinstance(self.unseal_id, str) else ""
         if not comp_key:
             self.unseal_error = "Key cannot be empty."
             self.unseal_loading = False
@@ -582,6 +582,29 @@ class AppState(GoogleAuthState):
             )
             
             self.unsealed_content = plaintext
+            
+            # Mark as read if the user is a recipient
+            db = _get_db()
+            if db:
+                try:
+                    secret = db.query(SecretMetadata).filter(SecretMetadata.comp_key == comp_key).first()
+                    if secret:
+                        recipient = db.query(SecretRecipient).filter(
+                            SecretRecipient.secret_id == secret.id,
+                            SecretRecipient.recipient_email == self.user_email
+                        ).first()
+                        if recipient and recipient.is_read == 0:
+                            recipient.is_read = 1
+                            db.commit()
+                            # Update local activities state to reflect the change
+                            for act in self.activities:
+                                if act["comp_key"] == comp_key and act["type"] == "Received":
+                                    act["is_new"] = False
+                                    break
+                except Exception as e:
+                    print(f"Error marking as read in do_unseal: {e}")
+                finally:
+                    db.close()
             
             # Handle reads left display
             reads = record.get("remainingReads")

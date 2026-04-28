@@ -62,9 +62,9 @@ def index() -> rx.Component:
                                     rx.el.span(act["date"], class_name="text-zinc-600 text-xs whitespace-nowrap"),
                                     rx.el.button(
                                         "Unseal",
-                                        on_click=lambda: [
+                                        on_click=lambda _e, comp_key=act["comp_key"]: [
                                             rx.call_script("document.getElementById('activity-loading-overlay').classList.remove('hidden')"),
-                                            AppState.view_activity(act["comp_key"])
+                                            AppState.view_activity(comp_key)
                                         ],
                                         class_name=(
                                             "ml-4 px-3 py-1 text-xs font-medium rounded border border-zinc-600 "
