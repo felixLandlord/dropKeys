@@ -142,14 +142,9 @@ class AppState(GoogleAuthState):
             sub, email, name, picture = "", "", None, ""
 
         if sub and email:
-            # Update local state immediately for a snappy UI
             self.stored_email = email or ""
             self.stored_name = name or ""
             
-            # Yield redirect immediately so the user doesn't wait for DB sync
-            yield rx.redirect("/home")
-
-            # Perform DB sync in the background
             db = _get_db()
             if db:
                 try:
@@ -166,12 +161,50 @@ class AppState(GoogleAuthState):
                     db.commit()
                     db.refresh(user)
                     self.db_user_id = user.id
+
+                    # Fetch activities immediately so the UI is snappy and correct
+                    owned = db.query(SecretMetadata).filter(SecretMetadata.owner_id == user.id).all()
+                    received_refs = db.query(SecretRecipient).filter(SecretRecipient.recipient_email == user.email).all()
+                    
+                    acts = []
+                    for s in owned:
+                        rec_emails = [r.recipient_email for r in s.recipients]
+                        acts.append({
+                            "id": s.doc_id,
+                            "name": s.name,
+                            "type": "Sent",
+                            "person": ", ".join(rec_emails) if rec_emails else "Link only",
+                            "date": s.created_at.strftime("%b %d, %H:%M"),
+                            "comp_key": s.comp_key or ""
+                        })
+                    
+                    for ref in received_refs:
+                        s = ref.secret
+                        if any(a["id"] == s.doc_id for a in acts):
+                            continue
+                        acts.append({
+                            "id": s.doc_id,
+                            "name": s.name,
+                            "type": "Received",
+                            "person": s.owner.email,
+                            "date": s.created_at.strftime("%b %d, %H:%M"),
+                            "comp_key": s.comp_key or ""
+                        })
+                    
+                    acts.sort(key=lambda x: x["date"], reverse=True)
+                    self.activities = acts
                 except Exception as e:
                     print(f"Database error during sync: {e}")
+                    self.activities = []
                     if db:
                         db.rollback()
                 finally:
                     db.close()
+            else:
+                self.activities = []
+            
+            # Yield redirect after state is populated so the correct user's view displays instantly
+            yield rx.redirect("/home")
         
         self.is_authenticating = False
 
